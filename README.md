@@ -53,23 +53,23 @@ Implemented models to estimate normal returns are:
 
 1. CAPM - $Ret_{i, t} = \alpha + \beta * (MktRet_{t} - RF_{t})$, where 
     
-    *$Ret_{i,t}$ - Return of company $i$ on day $t$. 
+    * $Ret_{i,t}$ - Return of company $i$ on day $t$. 
     
-    *$MktRet_{t}$ - Market return on day $t$. 
+    * $MktRet_{t}$ - Market return on day $t$. 
 
-    *$RF_{t}$ - Risk free rate on day $t$. 
+    * $RF_{t}$ - Risk free rate on day $t$. 
 
 2. Fama-French 3 factor model (aka FF3) - $Ret_{i, t} = \alpha + \beta * (MktRet_{t} - RF_{t}) + \gamma * SMB + \theta * HML$, where
 
-    *$Ret_{i,t}$ - Return of company $i$ on day $t$
+    * $Ret_{i,t}$ - Return of company $i$ on day $t$
     
-    *$MktRet_{t}$ - Market return on day $t$. 
+    * $MktRet_{t}$ - Market return on day $t$. 
 
-    *$RF_{t}$ - Risk free rate on day $t$. 
+    * $RF_{t}$ - Risk free rate on day $t$. 
 
-    *$SMB_{t}$ - Small minus Big factor on day $t$. 
+    * $SMB_{t}$ - Small minus Big factor on day $t$. 
 
-    *$HML_{t}$ - High minus Low factor on day $t$. 
+    * $HML_{t}$ - High minus Low factor on day $t$. 
 
 ## Financial Data Sources
 All the financial data is loaded automatically inside the package. In particular:
