@@ -73,6 +73,14 @@ class EventStudy(ColumnNameHandler):
 
     def run_study(self, x: pd.DataFrame, y=None) -> 'EventStudy':
         event_df = self._process_events(x)
+        if self.returns_df is None:
+            print(f"""Start loading the returns""")
+            self.add_returns(
+                event_df[self.ticker_col].unique(), 
+                min_date=event_df[self.date].min(),
+                max_date=event_df[self.date].max()
+            )
+
         feature_df = pd.merge(
             self.returns_df,
             self.factors_df, on=self.date_col)
