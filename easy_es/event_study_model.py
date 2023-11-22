@@ -77,8 +77,8 @@ class EventStudy(ColumnNameHandler):
             print(f"""Start loading the returns""")
             self.add_returns(
                 event_df[self.ticker_col].unique(), 
-                min_date=event_df[self.date].min(),
-                max_date=event_df[self.date].max()
+                min_date=event_df[self.date_col].min(),
+                max_date=event_df[self.date_col].max()
             )
 
         feature_df = pd.merge(
