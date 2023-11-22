@@ -7,6 +7,13 @@ Conduct financial event-study in just few lines of Python code.
   <i>Example of the event study output</i>
 </p>
 
+## Installation
+The package could be easily installed with pip:
+```
+pip install easy_es
+```
+
+
 ## Usage
 ```
 from easy_es import EventStudy
