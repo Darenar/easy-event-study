@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.0.3'
+VERSION = '0.0.5'
 DESCRIPTION = 'Python Event Financial Study'
 LONG_DESCRIPTION = 'Python package to conduct basic event financial study'
 

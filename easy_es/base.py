@@ -29,6 +29,8 @@ class ColumnNameHandler:
     pred_ret_col: str = 'pred_ret_col'
     ar_col: str = 'ar'
     car_col: str = 'car'
+    sar_col: str = 'sar'
+    scar_col: str = 'scar'
 
 
 class BasePandasRegressor(BaseEstimator, RegressorMixin, LogMixin, ColumnNameHandler):

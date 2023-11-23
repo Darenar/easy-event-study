@@ -31,7 +31,7 @@ In order to use the library, one needs to provide a dataframe with events with j
 
 ```
 from easy_es import EventStudy
-from easy_es.utils import plot_mean_car
+from easy_es.utils import plot_mean_car, calculate_car_stats
 
 # Event file should have 2 columns: ticker and event_date
 events = pd.read_csv('events_df.csv')
@@ -45,6 +45,10 @@ event_study = EventStudy(
     estimator_type='ff3'
 )
 event_res_df = event_study.run_study(events_df)
+
+# Get overall CAR stats with p-values
+calculate_car_stats(event_res_df=event_res_df, critical_value=0.95)
+
 # Plot mean effect with confidence levels
 plot_mean_car(event_res_df=event_res_df, critical_value=0.95)
 ```

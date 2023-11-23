@@ -43,9 +43,14 @@ class BaseEstimator(BasePandasRegressor):
         event_df = x[
             x[self.offset_col].isin(event_period)
         ].copy()
+        # Predict normal returns and calculate other variables
+        event_df.sort_values(self.offset_col, inplace=True)
         event_df.loc[:, self.pred_ret_col] = self.model.predict(sm.add_constant(event_df[self.feature_cols]))
         event_df.loc[:, self.ar_col] = event_df[self.ret_col] - event_df[self.pred_ret_col]
         event_df.loc[:, self.car_col] = event_df[self.ar_col].cumsum()
+        event_df.loc[:, self.sar_col] = event_df[self.ar_col] / self.model.resid.std()
+        event_df.loc[:, self.scar_col] = event_df[self.car_col] / (
+            self.model.resid.std() * np.sqrt(event_df.reset_index(drop=True).index+1))
         return event_df
 
 
