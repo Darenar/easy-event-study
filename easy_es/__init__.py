@@ -1,2 +1,2 @@
 from .event_study_model import EventStudy
-from .utils import plot_mean_car, calculate_car_stats
+from .utils import plot_mean_car, calculate_car_stats, plot_joint_mean_car

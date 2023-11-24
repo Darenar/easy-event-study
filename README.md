@@ -52,6 +52,26 @@ calculate_car_stats(event_res_df=event_res_df, critical_value=0.95)
 # Plot mean effect with confidence levels
 plot_mean_car(event_res_df=event_res_df, critical_value=0.95)
 ```
+One could also plot the results of two event studies on the same graph, using:
+```
+from easy_es.utils import plot_joint_mean_car
+
+event_res_increase = event_study.run_study(events_df_increase)
+event_res_decrease = event_study.run_study(events_df_decrease)
+
+plot_joint_mean_car(
+    event_res_increase, 
+    event_res_decrease, 
+    name_one='Increase', 
+    name_two='Decrease'
+)
+```
+<p align="center">
+<img src="imgs/example_two.png" alt="image" width="800" height="auto" alt='Methodology'>
+</p>
+<p align="center">
+  <i>Example of a joint mean CAR plot</i>
+</p>
 ### Factors data
 All daily factors are downloaded for the official [Fama-French data library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html).
 

@@ -51,7 +51,7 @@ def calculate_car_stats(event_res_df: pd.DataFrame, critical_value: float = 0.95
     return stat_car_df
 
 
-def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95) -> go.Figure:
+def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95, color_rgb: str = '0, 0, 255') -> go.Figure:
     """
     Function to plot the mean CAR effect with confidence levels over the event window
     Parameters
@@ -60,6 +60,8 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95) -> g
         Result dataframe from the output of event-study. Should contain event_id, offset, and car columns.
     critical_value : float, optional
         Critical value to use in confidence intervals estimation, by default 0.95
+    color_rgb: str
+        String specifying rgb color to be used in the plot. Default, blue (0,0,255)
 
     Returns
     -------
@@ -67,34 +69,44 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95) -> g
         Plotly figure
     """
     plot_df = calculate_car_stats(event_res_df=event_res_df, critical_value=critical_value)
+    conf_level = np.round(- norm.ppf((1-critical_value) / 2), 2)
     # Add Mean Trace
     trace_one = go.Scatter(
         x=plot_df.index,
         y=plot_df['mean'],
-        name='mean',
-        showlegend=False,
+        name='Mean',
+        showlegend=True,
         mode='lines',
-        line=dict(color='rgb(0, 0, 255)')
+        line=dict(color=f'rgb({color_rgb})')
     )
     # Add trace for the upper bound
     trace_fill_one = go.Scatter(
         x=plot_df.index,
         y=plot_df['upper_ci'],
-        name='Upper CI',
+        name=f'Mean + {conf_level}SE',
         mode='lines',
-        line=dict(width=1, color='rgba(0, 0, 255, 0.5)', dash='dash'),
-        showlegend=False,
+        line=dict(width=1, color=f'rgba({color_rgb}, 0.5)', dash='dash'),
+        showlegend=True,
         
     )
     # Add trace for the lower bound
     trace_fill_two = go.Scatter(
         x=plot_df.index,
         y=plot_df['lower_ci'],
-        fill='tonextx',
-        name='Lower CI',
+        name=f'Mean - {conf_level}SE',
         mode='lines',
-        fillcolor='rgba(0,0,255,0.1)',
-        line=dict(width=1, color='rgba(0, 0,255, 0.5)', dash='dash'),
+        line=dict(width=1, color=f'rgba({color_rgb}, 0.5)', dash='dash'),
+        showlegend=True,
+    )
+    # Add trace for the lower bound
+    trace_fill_two_shade = go.Scatter(
+        x=plot_df.index,
+        y=plot_df['lower_ci'],
+        fill='tonextx',
+        name='ShadedArea',
+        mode='lines',
+        fillcolor=f'rgba({color_rgb},0.1)',
+        line=dict(width=1, color=f'rgba({color_rgb}, 0.5)', dash='dash'),
         showlegend=False,
     )
     # Update layout  
@@ -104,13 +116,20 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95) -> g
         template='plotly_white',
         xaxis_title='Day Relative to Event',
         yaxis_title='Return',
-        yaxis_tickformat=',.1%'
+        yaxis_tickformat=',.1%',
+        legend=dict(
+                orientation="h",
+                xanchor = "center",
+                x=0.5,
+                y=-0.2
+        )        
     )
     fig = go.Figure(data=[
         trace_one, 
         trace_fill_one,
+        trace_fill_two_shade,
         trace_fill_two
-        ], layout=layout,
+        ], layout=layout
     )
     fig.add_vline(
         x=0, 
@@ -121,3 +140,53 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95) -> g
         line_width=1, 
         line_color='rgba(0, 0,0, 0.5)')
     return fig
+
+
+def plot_joint_mean_car(event_res_one: pd.DataFrame, event_res_two: pd.DataFrame, 
+                        name_one: str, name_two: str,  critical_value: float = 0.95) -> go.Figure:
+    """
+    Function to plot two mean CAR effects with confidence levels ont the same plot.
+    
+    Parameters
+    ----------
+    event_res_one : pd.DataFrame
+        First result dataframe from the output of event-study. Should contain event_id, offset, and car columns.
+    event_res_two : pd.DataFrame
+        Second result dataframe from the output of event-study. Should contain event_id, offset, and car columns.
+    name_one : str
+        Name of the first event study
+    name_two : str
+        Name of the second event study
+    critical_value : float, optional
+        Critical value to use in confidence intervals estimation, by default 0.95
+    Returns
+    -------
+    go.Figure
+        Plotly figure
+    """
+    fig_one = plot_mean_car(event_res_one)
+    fig_two = plot_mean_car(event_res_two, color_rgb='0, 153, 0')
+    for trace in fig_one.data:
+        trace.legendgroup = 'group1'
+        trace.legendgrouptitle=dict(text=f'<b>{name_one}</b> ({event_res_one[ColumnNameHandler.event_id_col].nunique()} events)')
+
+    for trace in fig_two.data:
+        trace.legendgroup = 'group2'
+        trace.legendgrouptitle=dict(text=f'<b>{name_two}</b> ({event_res_two[ColumnNameHandler.event_id_col].nunique()} events)')
+
+    for trace in fig_one.data:
+        fig_two.add_trace(trace)
+
+    fig_two.update_layout(
+        title=f"""<b>Cumulitative Abnormal Return: Mean & {round(critical_value*100)}% Confidence Limits</b><br>""",
+        legend=dict(
+            tracegroupgap=50,
+            orientation="h",
+            xanchor = "center",
+            x=0.55,
+            y=-0.3,
+            entrywidth=200,
+            traceorder='grouped'
+        )
+    )
+    return fig_two
