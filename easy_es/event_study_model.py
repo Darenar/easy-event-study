@@ -1,11 +1,14 @@
 from typing import List
 
 import pandas as pd
+import swifter
+from dateutil import parser
+from datetime import timedelta
 
 from .base import ColumnNameHandler
-from .data_loader import load_daily_returns, load_daily_factors
+from .data_loader import load_daily_returns
 from .utils import expand_date_columns
-from .estimation_models import CAPM, FF3, BaseEstimator
+from .estimation_models import CAPM, FF3, FF5, MAM, BaseEstimator
 
 
 class EventStudy(ColumnNameHandler):
@@ -19,7 +22,6 @@ class EventStudy(ColumnNameHandler):
         self.window_after = window_after
         self.min_estimation_days = min_estimation_days
         self.returns_df = None
-        self.factors_df = None
         self.estimator_type = estimator_type
         self.estimator = self.__initialize_estimator()
     
@@ -32,11 +34,13 @@ class EventStudy(ColumnNameHandler):
             'min_estimation_days': self.min_estimation_days
         }
         if self.estimator_type.lower() == 'capm':
-            self.factors_df = load_daily_factors()
             return CAPM(**study_params)
         elif self.estimator_type.lower() == 'ff3':
-            self.factors_df = load_daily_factors()
-            return FF3(*study_params)
+            return FF3(**study_params)
+        elif self.estimator_type.lower() == 'ff5':
+            return FF5(**study_params)
+        elif self.estimator_type.lower() == 'mam':
+            return MAM(**study_params)
         else:
             raise NotImplementedError(f"Estimator type {self.estimator_type} is not implemented.")
 
@@ -57,13 +61,22 @@ class EventStudy(ColumnNameHandler):
         event_df[self.date_col] = event_df[self.date_col].dt.date
         return event_df
     
-    def add_returns(self, list_of_tickers: List[str]=None, min_date: str=None, max_date: str=None, ret_df: pd.DataFrame=None):
+    def add_returns(self, list_of_tickers: List[str]=None, min_date: str=None, max_date: str=None, 
+                    ret_df: pd.DataFrame=None, offset: int = 1):
         if ret_df is not None:
             ret_df.loc[:, self.date_col] = pd.to_datetime(ret_df[self.date_col]).dt.date
-            self.returns_df = ret_df[[self.ret_col, self.date_col, self.ticker_col]]
+            self.returns_df = ret_df[[self.ret_col, self.date_col, self.ticker_col, self.volume_col]]
             return 
         if list_of_tickers is None or min_date is None or max_date is None:
             raise ValueError('Either returns DF should be provided, or the loading parameters.')
+        
+        # Add offset to the dates to make sure all returns for all specified dates are returned
+        if isinstance(min_date, str):
+            min_date = parser.parse(min_date)
+        if isinstance(max_date, str):
+            max_date = parser.parse(max_date)
+        min_date = min_date - timedelta(days=offset)
+        max_date = max_date + timedelta(days=offset)
         self.returns_df = load_daily_returns(
             list_of_tickers=list_of_tickers,
             min_date=min_date, 
@@ -80,13 +93,9 @@ class EventStudy(ColumnNameHandler):
                 min_date=event_df[self.date_col].min(),
                 max_date=event_df[self.date_col].max()
             )
-
-        feature_df = pd.merge(
-            self.returns_df,
-            self.factors_df, on=self.date_col)
         event_feature_df = pd.merge(
             event_df,
-            feature_df,
+            self.returns_df,
             on=[self.ticker_col, self.date_col], how='outer'
         )
         event_feature_df.dropna(inplace=True)

@@ -72,6 +72,7 @@ plot_joint_mean_car(
 <p align="center">
   <i>Example of a joint mean CAR plot</i>
 </p>
+
 ### Factors data
 All daily factors are downloaded for the official [Fama-French data library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html).
 
@@ -139,7 +140,7 @@ Implemented models to estimate normal returns are:
 
     * $RF_{t}$ - Risk free rate on day $t$. 
 
-2. Fama-French 3 factor model (aka FF3) - $Ret_{i, t} = \alpha + \beta * (MktRet_{t} - RF_{t}) + \gamma * SMB + \theta * HML$, where
+2. Fama-French 3 factor model (aka FF3) - $Ret_{i, t} = \alpha + \beta * (MktRet_{t} - RF_{t}) + \gamma * SMB_{t} + \theta * HML_{t}$, where
 
     * $Ret_{i,t}$ - Return of company $i$ on day $t$
     
@@ -150,3 +151,35 @@ Implemented models to estimate normal returns are:
     * $SMB_{t}$ - Small minus Big factor on day $t$. 
 
     * $HML_{t}$ - High minus Low factor on day $t$. 
+
+3. Fama-French 5 factor model (aka FF5) - $Ret_{i, t} = \alpha + \beta * (MktRet_{t} - RF_{t}) + \gamma * SMB_{t} + \theta * HML_{t} + \delta * CMA_{t} + \phi * RMW_{t}$, where
+
+    * $Ret_{i,t}$ - Return of company $i$ on day $t$
+    
+    * $MktRet_{t}$ - Market return on day $t$. 
+
+    * $RF_{t}$ - Risk free rate on day $t$. 
+
+    * $SMB_{t}$ - Small minus Big factor on day $t$. 
+
+    * $HML_{t}$ - High minus Low factor on day $t$. 
+
+    * $CMA_{t}$ - Conservative Minus Aggressive factor on day $t$.
+
+    * $RMW_{t}$ - Robust Minus Weak factor on day $t$.
+
+
+4. Market-Adjusted model (aka MAM) - $Ret_{i, t} = MktRet_{t}$, where
+
+    * $Ret_{i,t}$ - Return of company $i$ on day $t$
+    
+    * $MktRet_{t}$ - Market return on day $t$. 
+
+
+
+## Tests
+To run the tests, run the following:
+```
+pytest tests/tests.py
+```
+The ground truth is obtained from an external EventStudy tool to verify that the difference between the results is close to zero.

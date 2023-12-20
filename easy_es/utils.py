@@ -38,6 +38,7 @@ def calculate_car_stats(event_res_df: pd.DataFrame, critical_value: float = 0.95
     # Calculate mean and STD per each offset-day
     stat_car_df = pd.concat([
         car_df.mean().to_frame('mean'),
+        car_df.median().to_frame('median'),
         # STD for each offset day as the deviation from mean CAR on the day, divided N * (N-1), where N - number of asset on the day
         np.sqrt(((car_df - car_df.mean())**2).sum() / (car_df.notna().sum() * (car_df.notna().sum() - 1))).to_frame('sd')
         ], axis=1)
