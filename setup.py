@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 DESCRIPTION = 'Python Event Financial Study'
 LONG_DESCRIPTION = 'Python package to conduct basic event financial study'
 
@@ -16,17 +16,17 @@ setup(
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
         install_requires=[
-            "pandas==1.3.5",
-            "numpy==1.21.6",
-            "scipy==1.7.3",
-            "plotly==5.18.0",
-            "scikit-learn==1.3.2",
-            "yfinance==0.2.33",
-            "typing-extensions==4.9.0",
-            "tqdm==4.66.1",
+            "pandas>=1.3.5",
+            "numpy>=1.21.6",
+            "scipy>=1.7.3",
+            "plotly>=5.18.0",
+            "scikit-learn>=1.3.2",
+            "yfinance>=0.2.33",
+            "typing-extensions>=4.9.0",
+            "tqdm>=4.66.1",
             "statsmodels>=0.14.1",
-            "pytest==7.4.3",
-            "python-dateutil==2.8.2"
+            "pytest>=7.4.3",
+            "python-dateutil>=2.8.2"
         ], 
         keywords=['python'],
         classifiers= [
