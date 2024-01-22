@@ -24,7 +24,7 @@ setup(
             "yfinance==0.2.33",
             "typing-extensions==4.9.0",
             "tqdm==4.66.1",
-            "statsmodels==0.12.2",
+            "statsmodels>=0.14.1",
             "pytest==7.4.3",
             "python-dateutil==2.8.2"
         ], 
