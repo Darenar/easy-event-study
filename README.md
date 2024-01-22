@@ -1,4 +1,6 @@
 # Easy-Event-Study
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Darenar/easy-event-study/blob/main/example.ipynb)
+
 Conduct financial event-study in just few lines of Python code. 
 
 What you need to provide is just a **dataframe with events** (ticker, event_date) - the rest leave to the **Easy-Event-Study** that will automatically:
