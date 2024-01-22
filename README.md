@@ -42,7 +42,8 @@ event_study = EventStudy(
     window_after=10,
     window_before=10,
     min_estimation_days=100,
-    estimator_type='ff3'
+    estimator_type='ff3',
+    n_cores=1   # Number of CPU cores to use in processing. Usefull when there are many events
 )
 event_res_df = event_study.run_study(events_df)
 
@@ -79,10 +80,10 @@ All daily factors are downloaded for the official [Fama-French data library](htt
 ### Returns data
 Under the hood, **Easy-Event-Study** loads the returns data for the specified tickers and time-period using *yfinance* package. 
 
-However, it might take a while depending on the size of the event-study. For example, for 400 tickers and 10 years - it takes around 10 mins.
+Note: loading of returns might take a while depending on the size of the event-study. For example, for 400 tickers and 10 years - it takes around 10 mins.
 
 ### Pre-loading the returns
-However, sometimes one needs to test several hypothesis with different combination of events. In order not to waste time on loading the returns data on every execution, one could do the following prior step before `run_study`: 
+Sometimes one needs to test several hypothesis with different combination of events. In order not to waste time on loading the returns data on every execution, one could do the following prior step before `run_study`: 
 ```
 ## Load the returns. Dates should cover estimation and event windows
 event_study.add_returns(
