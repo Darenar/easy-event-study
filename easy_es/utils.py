@@ -1,8 +1,10 @@
+from typing import Any, Iterable, Callable
 import pandas as pd
 import numpy as np
 import datetime as dt
 from scipy.stats import norm
 import plotly.graph_objects as go
+from joblib import Parallel, delayed
 
 from .base import ColumnNameHandler
 
@@ -191,3 +193,12 @@ def plot_joint_mean_car(event_res_one: pd.DataFrame, event_res_two: pd.DataFrame
         )
     )
     return fig_two
+
+
+def run_in_parallel(func: Callable, data: Iterable[Any], n_cores: int) -> Iterable[Any]:
+    if n_cores == 1:
+        return [func(x) for x in data]
+    processed_data = Parallel(n_jobs=n_cores)(
+        delayed(func)(x) for x in data
+    )
+    return processed_data

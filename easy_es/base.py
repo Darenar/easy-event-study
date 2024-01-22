@@ -34,6 +34,7 @@ class ColumnNameHandler:
     car_col: str = 'car'
     sar_col: str = 'sar'
     scar_col: str = 'scar'
+    e_std_col: str = 'estimation_std'
 
 
 class BasePandasRegressor(BaseEstimator, RegressorMixin, LogMixin, ColumnNameHandler):

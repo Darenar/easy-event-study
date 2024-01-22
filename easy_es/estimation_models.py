@@ -50,7 +50,7 @@ class BaseEstimator(BasePandasRegressor):
         event_df.loc[:, self.sar_col] = event_df[self.ar_col] / self.estimation_resid.std()
         event_df.loc[:, self.scar_col] = event_df[self.car_col] / (
             self.estimation_resid.std() * np.sqrt(event_df.reset_index(drop=True).index+1))
-        event_df.loc[:, 'estimation_std'] = self.estimation_resid.std()
+        event_df.loc[:, self.e_std_col] = self.estimation_resid.std()
         return event_df
     
 
