@@ -3,12 +3,13 @@ from typing import List, Union, Dict
 import pandas as pd
 from copy import deepcopy
 from dateutil import parser
+from tqdm import tqdm
 import numpy as np
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from .base import ColumnNameHandler as CNH
 from .data_loader import load_daily_returns, load_daily_factors
-from .utils import expand_date_columns, run_in_parallel
+from .utils import expand_date_columns, run_in_parallel, calculate_car_stats
 from .estimation_models import RegReturnEstimator, MAMReturnEstimator, BaseEstimator
 
 
@@ -50,17 +51,22 @@ class EventStudy(CNH):
     def __init__(self, estimation_days: int = 255, gap_days: int = 50, 
                  window_before: int = 10, window_after: int = 10, 
                  min_estimation_days: int = 100, estimator_type: str = 'capm',
-                 n_cores: int = None):
+                 n_cores: int = None, verbose: bool = False):
         self.estimation_days = estimation_days
         self.gap_days = gap_days
         self.window_before = window_before
         self.window_after = window_after
         self.min_estimation_days = min_estimation_days
         self.returns_df = None
+        self.factors_df = None
         self.estimator_type = estimator_type
         self.n_cores = n_cores
         self.estimator = self.__initialize_estimator()
-        self.factors_df = self.add_factors()
+        self.verbose = verbose
+
+    def print(self, msg: str):
+        if self.verbose:
+            print(f"{datetime.now().time().strftime('%H:%M:%S')} - {msg}")
     
     def __initialize_estimator(self):
         if self.estimator_type.lower() == 'capm':
@@ -74,15 +80,18 @@ class EventStudy(CNH):
         else:
             raise NotImplementedError(f"Estimator type {self.estimator_type} is not implemented.")
     
-    def add_factors(self):
+    def add_factors(self, factors_df: pd.DataFrame=None):
+        if factors_df is not None:
+            self.factors_df = factors_df
+            return
         if self.estimator_type == 'ff5':
-            factors_df = load_daily_factors(five_factors=True)
+            self.factors_df = load_daily_factors(five_factors=True)
         else:
-            factors_df = load_daily_factors()
+            self.factors_df = load_daily_factors()
         # Need to downscale factor columns from percent to float
-        factor_names = factors_df.columns.difference([self.date_col])
-        factors_df.loc[:, factor_names] = factors_df[factor_names]/100
-        return factors_df
+        factor_names = self.factors_df.columns.difference([self.date_col])
+        self.factors_df.loc[:, factor_names] = self.factors_df[factor_names]/100
+        return
         
     def process_events_df(self, input_df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -108,12 +117,13 @@ class EventStudy(CNH):
         event_df.drop_duplicates(inplace=True)
         event_df.loc[:, self.date_col] = event_df[self.event_date_col].copy()
         # Adjust day of the event if needed
+        self.print(f"Expanding date column...")
         event_df = expand_date_columns(
             event_df, 
             date_col=self.date_col,
             before=self.window_before+self.gap_days + self.estimation_days + self.AUX_OFFSET,
             after=self.window_after + self.AUX_OFFSET)
-        event_df[self.date_col] = event_df[self.date_col].dt.date
+        event_df[self.date_col] = pd.to_datetime(event_df[self.date_col]).dt.date
         return event_df
     
     def add_returns(self, list_of_tickers: List[str]=None, 
@@ -181,17 +191,19 @@ class EventStudy(CNH):
         input_df.dropna(inplace=True)
         return input_df
 
-    def run_study(self, x: pd.DataFrame, y=None) -> pd.DataFrame:
+    def run_study(self, x: pd.DataFrame) -> pd.DataFrame:
+        self.print(f"Processing input events...")
         event_df = self.process_events_df(x)
 
         # Adding Returns data
         if self.returns_df is None:
-            print(f"""Start loading the returns""")
+            self.print(f"Start loading the returns...")
             self.add_returns(
                 event_df[self.ticker_col].unique(), 
                 min_date=event_df[self.date_col].min(),
                 max_date=event_df[self.date_col].max()
             )
+        self.print(f"Merging events and returns data...")
         event_df = pd.merge(
             event_df,
             self.returns_df,
@@ -200,9 +212,13 @@ class EventStudy(CNH):
         event_df.dropna(inplace=True)
 
         # Add offset column
+        self.print(f"Creating event offset column...")
         event_df = self.__add_offset(event_df)
         
         # Add factors data
+        self.print(f"Adding factors data...")
+        if self.factors_df is None:
+            self.add_factors()
         event_df = pd.merge(event_df, self.factors_df, on=self.date_col)
         
         # Create estimation and prediction periods
@@ -212,6 +228,7 @@ class EventStudy(CNH):
             1)
         prediction_period = np.arange(-self.window_before, self.window_after + 1, 1)
 
+        self.print(f"Initializing single event-studies...")
         # Create chunks by event_id
         groups = [
             {'estimator': deepcopy(self.estimator),
@@ -221,6 +238,7 @@ class EventStudy(CNH):
         ]
         # Filter out events with lower number of estimation observations
         groups = [g for g in groups if g['estimation_df'].shape[0] >= self.min_estimation_days]
+        self.print(f"Running event-study for all single events...")
         prediction_df = run_in_parallel(
             apply_estimator,
             groups, 
@@ -228,3 +246,37 @@ class EventStudy(CNH):
         ) 
         prediction_df = pd.concat(prediction_df, ignore_index=True)
         return prediction_df
+
+    def run_bootstrap_study(self, x: pd.DataFrame, n_bootstrap: int = 10) -> pd.DataFrame:
+        """
+        Run bootstrap event studies based on input events. 
+        The function shuffles input events n_bootstrap times, and calculates mean CAR on each run.
+
+        Parameters
+        ----------
+        x : pd.DataFrame
+            Input events dataframe with ticker and event_date column
+        n_bootstrap : int, optional
+            Number of bootstrap runs, by default 10
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with mean CAR values for each bootstrap run
+        """
+        n_events = x.drop_duplicates().shape[0]
+        self.print(f"Creating bootstrap input events...")
+        options = list()
+        for _ in tqdm(range(n_bootstrap)):
+            opt_df = x.copy()
+            opt_df.loc[:, self.event_date_col] = x[self.event_date_col].sample(frac=1).tolist()
+            options.append(opt_df.copy())
+        bootstrap_df = pd.concat(options, axis=0)
+        res_df = self.run_study(bootstrap_df)
+        self.print(f"Calculating mean CAR for bootstrap runs...")
+        mean_car_list = list()
+        for i in range(0, n_bootstrap):
+            mask = res_df[self.event_id_col].between(i*n_events, (i+1) * n_events,inclusive='left')
+            mean_car_list.append(
+                calculate_car_stats(res_df[mask])[['mean']].rename({'mean': i}, axis=1).copy())
+        return pd.concat(mean_car_list, axis=1)

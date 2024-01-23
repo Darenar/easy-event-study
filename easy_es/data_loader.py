@@ -31,10 +31,10 @@ def load_daily_returns(list_of_tickers: List[str], min_date: str, max_date: str)
     list_of_tickers = set([t for t in list_of_tickers if len(t.split())==1])
     for t in tqdm(list_of_tickers):
         # Load stock data daily
-        ticker_df = yf.download(t, min_date, max_date)
+        ticker_df = yf.download(t, min_date, max_date, progress=False)
         # If no data available - skip the ticker
         if 'Adj Close' not in ticker_df or ticker_df.empty:
-            logging.getLogger(__name__).info(f"Could not load return for ticker {t}. Skipping it.")
+            print(f"Could not load return for ticker {t}. Skipping it.")
             continue
         
         # Calculate daily returns as a percentage change

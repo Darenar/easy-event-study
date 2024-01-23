@@ -10,9 +10,31 @@ from .base import ColumnNameHandler
 
 
 def expand_date_columns(input_df: pd.DataFrame, date_col: str, before=400, after=30) -> pd.DataFrame:
-    input_df.loc[:, date_col] = pd.to_datetime(input_df[date_col])
-    input_df.loc[:, date_col] = input_df[date_col].apply(
-        lambda v: [v + dt.timedelta(days=int(i)) for i in np.arange(-before, after+1)])
+    """
+    Expand each date with n days before and n days after
+
+    Parameters
+    ----------
+    input_df : pd.DataFrame
+        Input dataframe
+    date_col : str
+        Date column
+    before : int, optional
+        Number of days to add before the date, by default 400
+    after : _type_, optional
+        Number of days to add after the date, by default 30
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with exploded dates
+    """
+    input_df.loc[:, date_col] = pd.to_datetime(input_df[date_col]).dt.date
+    expand_date_mapping = {
+        d: [d + dt.timedelta(days=int(i)) for i in np.arange(-before, after+1)] 
+        for d in input_df[date_col].unique()
+    }
+    input_df.loc[:, date_col] = input_df[date_col].map(expand_date_mapping)
     input_df = input_df.explode(date_col)
     input_df.reset_index(drop=True, inplace=True)
     return input_df
@@ -54,7 +76,8 @@ def calculate_car_stats(event_res_df: pd.DataFrame, critical_value: float = 0.95
     return stat_car_df
 
 
-def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95, color_rgb: str = '0, 0, 255') -> go.Figure:
+def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95, 
+                  color_rgb: str = '0, 0, 255', bootstrap_df: pd.DataFrame = None) -> go.Figure:
     """
     Function to plot the mean CAR effect with confidence levels over the event window
     Parameters
@@ -65,6 +88,8 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95, colo
         Critical value to use in confidence intervals estimation, by default 0.95
     color_rgb: str
         String specifying rgb color to be used in the plot. Default, blue (0,0,255)
+    bootstrap_df: pd.DataFrame, optional
+        Dataframe with bootstrap results to be used in confidence level identification
 
     Returns
     -------
@@ -72,7 +97,21 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95, colo
         Plotly figure
     """
     plot_df = calculate_car_stats(event_res_df=event_res_df, critical_value=critical_value)
-    conf_level = np.round(- norm.ppf((1-critical_value) / 2), 2)
+    
+    single_tail_critical_value = (1-critical_value)/2
+    conf_level = np.round(- norm.ppf(single_tail_critical_value), 2)
+    upper_conf_name = f'Mean + {conf_level}SE'
+    lower_conf_name = f'Mean - {conf_level}SE'
+
+    if bootstrap_df is not None:
+        single_tail_critical_value = (1-critical_value)/2
+        confidence_df = bootstrap_df.T.quantile([single_tail_critical_value, 1-single_tail_critical_value]).T
+        confidence_df.columns = ['lower_ci', 'upper_ci']
+        plot_df.drop(['lower_ci', 'upper_ci'], axis=1, inplace=True)
+        plot_df = plot_df.join(confidence_df)
+        upper_conf_name = f'Q:{round(1-single_tail_critical_value, 3)} by bootstrap'
+        lower_conf_name = f'Q:{round(single_tail_critical_value, 3)} by bootstrap'
+
     # Add Mean Trace
     trace_one = go.Scatter(
         x=plot_df.index,
@@ -86,7 +125,7 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95, colo
     trace_fill_one = go.Scatter(
         x=plot_df.index,
         y=plot_df['upper_ci'],
-        name=f'Mean + {conf_level}SE',
+        name=upper_conf_name,
         mode='lines',
         line=dict(width=1, color=f'rgba({color_rgb}, 0.5)', dash='dash'),
         showlegend=True,
@@ -96,7 +135,7 @@ def plot_mean_car(event_res_df: pd.DataFrame, critical_value: float = 0.95, colo
     trace_fill_two = go.Scatter(
         x=plot_df.index,
         y=plot_df['lower_ci'],
-        name=f'Mean - {conf_level}SE',
+        name=lower_conf_name,
         mode='lines',
         line=dict(width=1, color=f'rgba({color_rgb}, 0.5)', dash='dash'),
         showlegend=True,
